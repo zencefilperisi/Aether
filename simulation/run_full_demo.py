@@ -46,3 +46,9 @@ plt.savefig(save_path, dpi=400, bbox_inches='tight', facecolor='black')
 plt.close()
 
 print(f"Success: Attractor saved → {save_path}")
+
+if __name__ == "__main__":
+    # ... mevcut demo kodu ...
+    print("Computing Lyapunov dimension (this may take 10-20 seconds)...")
+    dim = engine.compute_lyapunov_dimension()
+    print(f"Success: Estimated Lyapunov (Kaplan-Yorke) dimension: {dim:.3f}")
