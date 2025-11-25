@@ -3,9 +3,7 @@ __pycache__/
 *.pyo
 *.pyd
 *.log
+data.txt
+results/*.png
 .DS_Store
-.venv/
-env/
-venv/
-*.png
-!docs/figures/*.png
+Thumbs.db
