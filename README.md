@@ -1,6 +1,6 @@
 # Aether v2.0 – Live Quantum-Seeded Hyperchaos + Post-Quantum Crypto Demo
 
-![Aether Attractor](docs/figures/aether_attractor_20251129_184343.png)
+![Aether Attractor]("C:\Users\User\Desktop\Aether\docs\figures\aether_20251129_183949.png")
 
 **15-second pure Python demo featuring:**
 
