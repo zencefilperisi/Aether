@@ -82,6 +82,3 @@ Run the cryptographic test suite on a 10 million bit stream.
 ```bash
 (venv) Aether> python tests/entropy_test.py
 ```
-
-```bash
-```
