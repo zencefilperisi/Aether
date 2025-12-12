@@ -1,9 +1,14 @@
+venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.so
+*.dll
+target/
+dist/
+build/
 *.log
 data.txt
-results/*.png
-.DS_Store
+docs/benchmarks/
 Thumbs.db
