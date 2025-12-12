@@ -7,8 +7,8 @@ Aether is a high-performance, cryptographically hardened pseudo-random number ge
 The refactoring achieved a significant speed increase while guaranteeing cryptographic quality:
 
 * **Legacy Python Core Latency:** 1.73 µs
-* **Rust Core (NIST Hardened) Latency:** **0.92 µs**
-* **Result:** **47.00% Reduction** in latency, successfully passing the sub-2.0 µs target.
+* **Rust Core (NIST Hardened) Latency:** **0.89 µs**
+* **Result:** **48.21% Reduction** in latency, successfully passing the sub-2.0 µs target.
 
 ## Security & Validation (NIST SP 800-22)
 
