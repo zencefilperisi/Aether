@@ -7,8 +7,7 @@ use sha2::{Digest, Sha256};
 // Chaotic System State and Parameters
 #[pyclass]
 pub struct AetherCore {
-    // PYTHEON'DAN ERİŞİM İÇİN DÜZELTME:
-    // Bu alanlara Python'dan okunabilir (get) ve yazılabilir (set) erişim izni veriyoruz.
+    // CORRECTION: Added #[pyo3(get, set)] to allow Python access (read/write)
     #[pyo3(get, set)]
     pub x: f64,
     #[pyo3(get, set)]
@@ -16,7 +15,7 @@ pub struct AetherCore {
     #[pyo3(get, set)]
     pub z: f64,
     
-    // Bunlar Python'dan erişilemez (sadece Rust içinden kullanılır)
+    // Internal parameters (not exposed to Python directly)
     a: f64,
     b: f64,
     c: f64,
@@ -41,7 +40,7 @@ impl AetherCore {
         self.y += self.dt * dy;
         let new_z = self.z + self.dt * dz;
         
-        // Z değişkeni güvenliği için sayısal kararlılık kontrolü
+        // Numerical stability control
         self.z = new_z.rem_euclid(100.0);
     }
 
@@ -51,16 +50,16 @@ impl AetherCore {
             self._step();
         }
         
-        // 1. Durum değişkenlerini byte dizisine birleştirme
+        // 1. Combine state variables into a string
         let data = format!("{}:{}:{}", self.x, self.y, self.z);
         let bytes = data.as_bytes();
 
-        // 2. SHA256 Hash'i hesaplama
+        // 2. Compute SHA256 Hash of the system state
         let mut hasher = Sha256::new();
         hasher.update(bytes);
         let result = hasher.finalize();
 
-        // 3. Hash'in ilk byte'ının en düşük anlamlı bitini (LSB) kullanma
+        // 3. Extract one bit using the Least Significant Bit (LSB) of the first byte of the hash
         let first_byte = result[0];
         (first_byte & 1) as i32 // Return 0 or 1
     }
