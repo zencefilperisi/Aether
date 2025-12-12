@@ -1,0 +1,9 @@
+[package]
+name = "aether_core_rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pyo3 = { version = "0.21", features = ["extension-module"] }
+numpy = "0.21"
+sha2 = "0.10"  
