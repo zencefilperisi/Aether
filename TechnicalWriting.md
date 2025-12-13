@@ -56,4 +56,8 @@ The NIST SP 800-90 series defines a security framework for Random Number Generat
 | **SP 800-90B** | Entropy Source Validation | The chaotic core behaves as a high-quality **Entropy Source (ES)**. The calculated **7.7579 bit** Min-Entropy value comfortably exceeds the minimum entropy requirements stipulated by this standard. |
 | **SP 800-90C** | PRNG Component Construction | Aether's hybrid architecture—integrating the Chaos Engine (ES), Hash Function (Extraction), and XOR Mixer (Mixing)—adheres to the philosophy of combining multiple components to construct a secure and validated PRNG.  |
 
+**Benchmark Results**  
+
+"C:\Users\User\Desktop\Aether\Ekran görüntüsü 2025-12-13 153712.png"
+
 **Conclusion:** Aether NIHDE is a high-performance, academically verifiable, and industrially relevant solution that successfully balances speed and cryptographic randomness quality.
