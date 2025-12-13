@@ -23,6 +23,8 @@ Aether utilizes a robust hybrid architecture for maximum efficiency and flexibil
     * **Interface:** Provides a simple `decide()` interface.
     * **Final Mixing:** Applies a second level of XOR mixing (`final_output = random_byte ^ self.last_byte`) to break any remaining sequential patterns, guaranteeing the reported **{data['min_entropy']}** Min-Entropy.
 
+![Aether Benchmark Results](Ekran görüntüsü 2025-12-13 153712.png)
+
 ### Installation
 
 ```bash
