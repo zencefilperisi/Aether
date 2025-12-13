@@ -4,7 +4,6 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Assuming Kyber768 and NIHDE are now using the correct Rust core import paths
 from core.chaos.nihde import NIHDE
 from core.pqc.kyber768 import Kyber768
 

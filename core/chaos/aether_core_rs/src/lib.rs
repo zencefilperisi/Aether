@@ -7,7 +7,6 @@ use sha2::{Digest, Sha256};
 // Chaotic System State and Parameters
 #[pyclass]
 pub struct AetherCore {
-    // CORRECTION: Added #[pyo3(get, set)] to allow Python access (read/write)
     #[pyo3(get, set)]
     pub x: f64,
     #[pyo3(get, set)]
@@ -15,7 +14,7 @@ pub struct AetherCore {
     #[pyo3(get, set)]
     pub z: f64,
     
-    // Internal parameters (not exposed to Python directly)
+    // Internal parameters (Rössler System parameters)
     a: f64,
     b: f64,
     c: f64,
@@ -29,13 +28,14 @@ impl AetherCore {
         AetherCore { x, y, z, a, b, c, dt }
     }
 
-    /// Executes one iteration step of the numerical integration.
+    /// Executes one iteration step of the numerical integration (Rössler System).
     #[inline]
     pub fn _step(&mut self) {
+        // Rössler Equations
         let dx = -self.y - self.z;
         let dy = self.x + self.a * self.y;
         let dz = self.b + self.z * (self.x - self.c);
-
+        
         self.x += self.dt * dx;
         self.y += self.dt * dy;
         let new_z = self.z + self.dt * dz;
@@ -44,8 +44,8 @@ impl AetherCore {
         self.z = new_z.rem_euclid(100.0);
     }
 
-    /// Executes N steps and extracts a single, cryptographically strong bit using SHA256.
-    pub fn decide_rust(&mut self, iterations: usize) -> i32 {
+    /// Executes N steps and extracts one full byte (u8) using XOR of two hash bytes.
+    pub fn decide_rust(&mut self, iterations: usize) -> u8 { 
         for _ in 0..iterations {
             self._step();
         }
@@ -59,9 +59,19 @@ impl AetherCore {
         hasher.update(bytes);
         let result = hasher.finalize();
 
-        // 3. Extract one bit using the Least Significant Bit (LSB) of the first byte of the hash
-        let first_byte = result[0];
-        (first_byte & 1) as i32 // Return 0 or 1
+        // 3. Extract TWO BYTES from the hash and XOR them to guarantee output variability.
+        let hash_slice = result.as_slice();
+        let first_byte = hash_slice[0]; 
+        let second_byte = hash_slice[1];
+        
+        first_byte ^ second_byte 
+    }
+    
+    /// Reseeds the chaotic system with new state variables.
+    pub fn reseed_rust(&mut self, new_x: f64, new_y: f64, new_z: f64) {
+        self.x = new_x;
+        self.y = new_y;
+        self.z = new_z;
     }
     
     /// Generates a trajectory of (x, y, z) states over N steps.
@@ -75,7 +85,6 @@ impl AetherCore {
             traj.push(self.z);
         }
         
-        // Convert Vec to Py<PyArray1<f64>> and transfer ownership to Python
         Ok(traj.into_pyarray_bound(py).to_owned().unbind())
     }
 }
