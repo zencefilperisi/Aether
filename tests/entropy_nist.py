@@ -50,3 +50,5 @@ print(f"Block Frequency Test (M=1000): {b_status} (p = {block_p:.6f})")
 print("\nALL TESTS PASSED → Chaos output is cryptographically strong")
 print("Comparable to NIST STS 14–15/15 PASSED")
 print("="*60)
+
+#test change
