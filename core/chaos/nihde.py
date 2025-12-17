@@ -74,3 +74,6 @@ class NIHDE:
 
         # 3. Return the final, high-entropy byte.
         return final_output
+    
+
+    #test change
