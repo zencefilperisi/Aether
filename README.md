@@ -1,4 +1,4 @@
-![Aether Chaotic Attractor](aether_attractor.png)
+![Aether Attractor](docs/figures/aether_attractor.png)
 
 # AETHER: Chaotic Entropy & Security Suite
 
