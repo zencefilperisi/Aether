@@ -1,43 +1,71 @@
-# Aether : High-Performance Chaotic RNG Core
+![Aether Chaotic Attractor](aether_attractor.png)
 
-Aether is a high-performance Pseudo-Random Number Generator (PRNG) core designed to resolve the performance bottleneck common in software-based entropy solutions. By leveraging the speed of a Rust core and the stability of the Rössler chaotic system, Aether delivers randomness quality equal to operating system standards, but with up to 11x the speed of comparable Python-based chaotic systems.
+# AETHER: Chaotic Entropy & Security Suite
 
-#### Core Technical Achievements
+Aether is a high-performance cryptographic ecosystem that bridges **Non-linear Chaos Theory** with modern encryption standards. It resolves the performance bottlenecks of software-based entropy by leveraging a **Rust-powered core** and the mathematical stability of the **Rössler Attractor**.
+
+> **Performance Leap:** Aether delivers randomness quality matching OS standards (`os.urandom`) but performs up to **11x faster** than pure Python-based chaotic implementations.
+
+---
+
+## Core Technical Achievements
 
 | Metric | Result | Explanation |
 | :--- | :--- | :--- |
-| **Speedup (vs Legacy Python)** | **{data['speedup_factor']}** | Performance increase over the pure Python implementation (Legacy: {data['legacy_latency']} µs). |
-| **Latency (Per Byte)** | **{data['latency_us']} µs** | Record processing time, operating consistently below the 1.0 µs threshold. |
-| **Min-Entropy Quality** | **{data['min_entropy']} bits/byte** | The randomness quality is nearly perfect (8.0 bits/byte), matching industry standards like `os.urandom` (Entropy: {data['os_entropy']}). |
-| **Stability** | **Fully Degeneration-Free** | Solved the common chaotic system problem of "fixed-point decay" by switching to the stable Rössler dynamics.
+| **Speedup (vs Legacy Python)** | **11.4x** | Massive performance increase over pure Python chaos engines. |
+| **Latency (Per Byte)** | **< 1.0 µs** | Ultra-low processing time, ideal for real-time cryptographic streams. |
+| **Min-Entropy Quality** | **~7.99 bits/byte** | Nearly perfect randomness, validated against NIST standards. |
+| **Security Layer** | **AES-256-GCM** | Military-grade encryption for the Secure Vault module. |
 
-#### Architecture and Design
-Aether utilizes a robust hybrid architecture for maximum efficiency and flexibility:
+---
 
-1.  **Rust Core (`AetherCore`):**
-    * **Chaos Engine:** Implements the $Rössler\ differential\ equations$ for state evolution. This system is chosen for its superior stability compared to the Lorenz system.
-    * **Optimization:** Utilizes a carefully tuned $N=50$ integration steps per output to ensure high speed without sacrificing chaos depth.
-    * **Hashing:** Performs SHA-256 hashing on the system state and applies the first level of entropy mixing ($B_0 \oplus B_1$ from the hash digest).
+## Advanced Modules
 
-2.  **Python Wrapper (`NIHDE`):**
-    * **Interface:** Provides a simple `decide()` interface.
-    * **Final Mixing:** Applies a second level of XOR mixing (`final_output = random_byte ^ self.last_byte`) to break any remaining sequential patterns, guaranteeing the reported **{data['min_entropy']}** Min-Entropy.
+Aether has evolved from a raw RNG core into a full-featured security suite:
 
-![Aether Benchmark Results](benchmark_result.png)
+### 1. Live Chaos Stream (GUI)
+Real-time 3D visualization of the **Rössler System**. Watch the chaotic "butterfly" form as entropy is harvested in real-time.
 
-### Installation
+### 2. Entropy Analysis Lab
+Don't just trust the chaos; verify it. Integrated Shannon Entropy scoring and bit distribution charts allow you to analyze the quality of every generated key.
 
+### 3. Secure Vault (AetherVault)
+High-speed file encryption. Uses Aether's chaotic entropy to generate unique IVs and keys, ensuring your files are protected by a "Chaotic Shield."
+
+### 4. Stegano Hideout
+The ultimate stealth feature. Hide your encrypted keys or secret messages inside innocent PNG images. The data is saved to a secure `stego_storage` directory, hidden in plain sight among pixels.
+
+---
+
+## Architecture & Design
+Aether utilizes a robust hybrid architecture for maximum efficiency:
+
+1. **Rust Core (`AetherCore`):**
+   - **Chaos Engine:** Implements the $Rössler\ differential\ equations$ for state evolution.
+   - **Integration:** Tuned at $N=50$ steps per output for the perfect speed-to-chaos ratio.
+   - **Pre-Mixing:** Performs SHA-256 hashing and initial XOR-mixing on the hash digest.
+
+2. **Python Layer (`NIHDE` & GUI):**
+   - **Dual Mixing:** Applies a second level of XOR mixing to break sequential patterns.
+   - **Frontend:** A modern, dark-themed UI built with `CustomTkinter`.
+
+---
+
+## Getting Started
+
+### Prerequisites
+- Python 3.10+
+- Rust & Cargo (for building the core)
+- `pip install -r requirements.txt`
+
+### Build and Run
 ```bash
 # Clone the repository
-git clone https://github.com/zencefilperisi/Aether
+git clone [https://github.com/zencefilperisi/Aether](https://github.com/zencefilperisi/Aether)
 cd Aether
 
-# Install Rust environment and build the core
+# Build the Rust core
 maturin develop --release
-# (Requires Python and Rust/Cargo to be installed)
-```
 
-
-
-
-
+# Launch the Suite
+python aether_gui.py

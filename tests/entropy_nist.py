@@ -1,54 +1,99 @@
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import numpy as np
-from core.chaos.nihde import NIHDE
+from scipy.fft import fft 
+from scipy.special import erfc 
+from scipy.stats import chi2
 
-print("Aether – Generating 1,000,000 bits for randomness validation...")
-engine = NIHDE(use_live_qrng=True)
+# --- PATH SETUP ---
+sys.path.append(os.getcwd())
+try:
+    from core.chaos.nihde import NIHDE
+except ImportError:
+    print("Error: Could not find core.chaos.nihde. Run from the project root.")
+    sys.exit(1)
 
-bits = np.unpackbits(np.array([engine.decide() for _ in range(125_000)], dtype=np.uint8))
+# --- DATA GENERATION ---
+print("Aether – Generating 1,000,000 bits for NIST validation...")
+engine = NIHDE()
+# Collect 125,000 bytes = 1,000,000 bits
+raw_bytes = np.array([engine.decide() for _ in range(125_000)], dtype=np.uint8)
 
-from scipy.stats import chisquare
+# CONVERSION: Convert to float immediately to avoid uint8 underflow (0-1 = 255)
+bits = np.unpackbits(raw_bytes).astype(float)
 
-def frequency_test(b):
-    ones = np.sum(b)
+# --- NIST STATISTICAL TESTS ---
+
+def frequency_monobit_test(b):
+    """Checks the overall balance of 0s and 1s."""
     n = len(b)
-    p = chisquare([ones, n-ones], [n/2, n/2]).pvalue
-    return "PASSED" if p > 0.01 else "FAILED", p
+    # Transform bits 0,1 to -1,1
+    s_n = np.sum(2 * b - 1)
+    s_obs = abs(s_n) / np.sqrt(n)
+    p_value = erfc(s_obs / np.sqrt(2))
+    return "PASSED" if p_value > 0.01 else "FAILED", p_value
 
 def runs_test(b):
-    runs = 1 + np.sum(b[:-1] != b[1:])
-    ones = np.sum(b)
+    """Checks if the frequency of transitions is random."""
     n = len(b)
-    if abs(ones - n/2) > 2:
-        return "FAILED", 0
-    pi = ones / n
-    expected = 2 * pi * (1 - pi) * n + 1
-    var = 2 * pi * (1 - pi) * (2 * pi * (1 - pi) * n - n) / (n * (n - 1))
-    z = abs(runs - expected) / np.sqrt(var)
-    p = np.exp(-2 * z**2) * 2  # yaklaşık
-    return "PASSED" if p > 0.01 else "FAILED", p
+    pi = np.sum(b) / n
+    # Prerequisite: Frequency test must not be too far off
+    if abs(pi - 0.5) >= (2 / np.sqrt(n)):
+        return "FAILED (Imbalance)", 0.0
+    
+    v_n_obs = np.sum(b[:-1] != b[1:]) + 1
+    numerator = abs(v_n_obs - 2 * n * pi * (1 - pi))
+    denominator = 2 * np.sqrt(2 * n) * pi * (1 - pi)
+    p_value = erfc(numerator / denominator)
+    return "PASSED" if p_value > 0.01 else "FAILED", p_value
+
+def spectral_dft_test(b):
+    """Checks for periodic patterns (The most difficult test)."""
+    n = len(b)
+    x = 2 * b - 1
+    s = fft(x)
+    m = np.abs(s)[:n//2] # Only the first half of frequencies
+    
+    t = np.sqrt(np.log(1/0.05) * n) # Threshold
+    n0 = 0.95 * (n / 2)            # Expected peaks under threshold
+    v = np.sum(m < t)              # Observed peaks under threshold
+    
+    d = (v - n0) / np.sqrt(n * 0.95 * 0.05 / 4)
+    p_value = erfc(abs(d) / np.sqrt(2))
+    return "PASSED" if p_value > 0.01 else "FAILED", p_value
+
+def block_frequency_test(b, block_size=128):
+    """Checks balance within local blocks."""
+    n = len(b)
+    num_blocks = n // block_size
+    # Reshape into blocks and calculate proportion of ones
+    blocks = b[:num_blocks * block_size].reshape(num_blocks, block_size)
+    pi = np.sum(blocks, axis=1) / block_size
+    chi_sq = 4 * block_size * np.sum((pi - 0.5)**2)
+    p_value = chi2.sf(chi_sq, df=num_blocks)
+    return "PASSED" if p_value > 0.01 else "FAILED", p_value
+
+# --- EXECUTION ---
 
 print("\n" + "="*60)
-print("NIST SP 800-22 COMPATIBLE STATISTICAL TESTS")
+print("NIST SP 800-22 STATISTICAL SUITE")
 print("="*60)
 
-f_status, f_p = frequency_test(bits)
-r_status, r_p = runs_test(bits)
+results = [
+    ("Frequency (Monobit)", frequency_monobit_test(bits)),
+    ("Runs Test", runs_test(bits)),
+    ("Spectral (DFT) Test", spectral_dft_test(bits)),
+    ("Block Frequency", block_frequency_test(bits))
+]
 
-print(f"Frequency (Monobit) Test     : {f_status} (p = {f_p:.6f})")
-print(f"Runs Test                    : {r_status} (p = {r_p:.6f})")
+failed = False
+for name, (status, p) in results:
+    print(f"{name:<25}: {status} (p = {p:.6f})")
+    if status != "PASSED": failed = True
 
-# Block frequency
-blocks = bits.reshape(-1, 1000)
-block_p = chisquare(np.sum(blocks, axis=1), np.ones(len(blocks)) * 500).pvalue
-b_status = "PASSED" if block_p > 0.01 else "FAILED"
-print(f"Block Frequency Test (M=1000): {b_status} (p = {block_p:.6f})")
-
-print("\nALL TESTS PASSED → Chaos output is cryptographically strong")
-print("Comparable to NIST STS 14–15/15 PASSED")
 print("="*60)
-
-#test change
+if not failed:
+    print("OVERALL RESULT: PASSED - Entropy is statistically sound.")
+else:
+    print("OVERALL RESULT: FAILED - Patterns detected.")
+print("="*60)

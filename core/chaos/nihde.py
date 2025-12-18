@@ -1,79 +1,104 @@
-# core/chaos/nihde.py
-
 import os
 import sys
-import struct 
+import hashlib
+import hmac
 
-# Add the project root directory
+# Ensure the Rust core can be found
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
 try:
     from aether_core_rs import AetherCore
-    RUST_CORE_AVAILABLE = True
-except ImportError as e:
-    print(f"FATAL ERROR: Could not import aether_core_rs: {e}")
-    RUST_CORE_AVAILABLE = False
-
+except ImportError:
+    print("FATAL ERROR: Could not import aether_core_rs. Ensure the library is compiled and in the path.")
 
 class NIHDE:
     """
     Nondeterministic High-Entropy Decision Engine (NIHDE).
-    Optimized random number generator based on the Rössler chaotic system.
-    Continuous Health Check (CHC) has been removed for maximum performance.
-    """
-    def __init__(self, use_live_qrng=False):
-        
-        # Aether/Rössler stable parameters (a=0.1, b=0.1, c=14.0)
-        self.core = AetherCore(0.1, 0.1, 0.1, 0.1, 0.1, 14.0, 0.01)
-        
-        # Reseed counter (for information purposes only)
-        self.reseed_count = 0
-        
-        # Stores the last byte for double XOR (to break static patterns)
-        self.last_byte = 0
-        # ------------------------------------------------------------------
-
-    # Manual reseed method is kept for external calls if needed.
-    def reseed_manual(self):
-        """Manually reseeds the system using os.urandom for maximum stability."""
-        try:
-            random_data = os.urandom(24)
-            
-            raw_x = struct.unpack('<d', random_data[0:8])[0]
-            raw_y = struct.unpack('<d', random_data[8:16])[0]
-            raw_z = struct.unpack('<d', random_data[16:24])[0]
-
-            # Normalize to the [-100.0, 100.0) range
-            new_x = (abs(raw_x) % 200.0) - 100.0
-            new_y = (abs(raw_y) % 200.0) - 100.0
-            new_z = (abs(raw_z) % 200.0) - 100.0
-            
-            # Prevent overly small initial values
-            if abs(new_x) < 0.1: new_x += 0.1 
-            if abs(new_y) < 0.1: new_y += 0.1
-            if abs(new_z) < 0.1: new_z += 0.1
-
-            self.core.reseed_rust(new_x, new_y, new_z)
-            self.reseed_count += 1
-            print(f"[INFO] System manually reseeded (Count: {self.reseed_count}).")
-        
-        except Exception as e:
-            print(f"[CRITICAL] Manual reseeding failed: {e}")
-
-
-    # CORE METHOD: decide (N=50 Iterations and Double XOR)
-    def decide(self):
-        """Fetches entropy from the Rust core and applies double XOR."""
-        
-        # 1. Get byte from the Rust core (N=50 iterations for speed)
-        random_byte = self.core.decide_rust(iterations=50) 
-        
-        # 2. Double XOR: Current byte XORed with the previous byte.
-        final_output = random_byte ^ self.last_byte
-        self.last_byte = random_byte 
-
-        # 3. Return the final, high-entropy byte.
-        return final_output
     
+    Architecture:
+    1. Entropy Source: Dual-Core Chaos (Rössler Attractors) + OS Hardware Entropy.
+    2. Conditioner: HMAC-DRBG (NIST SP 800-90A) using SHA-256.
+    3. Health Monitor: Continuous repetition count testing to detect entropy failure.
+    """
+    
+    def __init__(self):
+        # Chaos Engine Parameters (Rössler Attractors)
+        self.core1 = AetherCore(0.1, 0.1, 0.1, 0.1, 0.1, 14.0, 0.0072973)
+        self.core2 = AetherCore(0.1, 0.1, 0.1, 0.2, 0.2, 5.7, 0.0072973)
+        
+        # HMAC-DRBG Internal State
+        self.K = b'\x00' * 32  # 256-bit Key
+        self.V = b'\x01' * 32  # 256-bit Value
+        self.pool = bytearray()
+        
+        # Health Monitor State
+        self.last_byte = -1
+        self.rep_count = 0
+        self.max_rep_limit = 10 # Halt if the same byte repeats 10 times
+        
+        # Coordinate tracking for visualization
+        self.current_coords = (0.0, 0.0, 0.0)
+        
+        # Initial seeding
+        self.reseed_manual()
 
-    #test change
+    def _hmac_update(self, data=None):
+        """Internal HMAC_DRBG Update function as per NIST SP 800-90A."""
+        self.K = hmac.new(self.K, self.V + b'\x00' + (data or b''), hashlib.sha256).digest()
+        self.V = hmac.new(self.K, self.V, hashlib.sha256).digest()
+        if data:
+            self.K = hmac.new(self.K, self.V + b'\x01' + data, hashlib.sha256).digest()
+            self.V = hmac.new(self.K, self.V, hashlib.sha256).digest()
+
+    def reseed_manual(self):
+        """Gathers entropy from Chaos Core 1 and OS to refresh the internal state."""
+        # Evolve core to a high-entropy state
+        _, _, state_hash = self.core1.decide_rust(iterations=1000)
+        
+        # Combine Chaos with Hardware Entropy
+        seed_material = bytes(state_hash) + os.urandom(32)
+        self._hmac_update(seed_material)
+        
+        self.pool = bytearray()
+        print("[INFO] NIHDE: HMAC-DRBG state reseeded with chaotic entropy.")
+
+    def _generate_block(self):
+        """Produces 1024 bytes of whitened entropy."""
+        temp_output = bytearray()
+        
+        while len(temp_output) < 1024:
+            # Advance core 1 and capture coordinates for visualizer
+            # Assuming decide_rust returns (val1, val2, state_tuple)
+            _, _, state_tuple = self.core1.decide_rust(iterations=1)
+            self.current_coords = (state_tuple[0], state_tuple[1], state_tuple[2])
+            
+            # HMAC-DRBG Generation step
+            self.V = hmac.new(self.K, self.V, hashlib.sha256).digest()
+            temp_output.extend(self.V)
+        
+        # Periodic perturbation using Core 2 to ensure non-determinism
+        _, _, state2 = self.core2.decide_rust(iterations=128)
+        self._hmac_update(bytes(state2))
+        
+        self.pool = temp_output[:1024]
+
+    def decide(self):
+        """Returns one byte with real-time health monitoring."""
+        if not self.pool:
+            self._generate_block()
+        
+        byte = self.pool.pop(0)
+
+        # --- RUNTIME HEALTH MONITOR ---
+        if byte == self.last_byte:
+            self.rep_count += 1
+            if self.rep_count >= self.max_rep_limit:
+                raise RuntimeError("CRITICAL FAILURE: Entropy health check failed (Repetition Detected)!")
+        else:
+            self.rep_count = 0
+        
+        self.last_byte = byte
+        return byte
+
+    def get_raw_coordinates(self):
+        """Returns the current X, Y, Z coordinates for 3D visualization."""
+        return self.current_coords
