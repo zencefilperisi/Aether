@@ -42,7 +42,7 @@ class NIHDE:
     def _get_anu_qrng(self, bytes_needed=32):
         try:
             url = f"https://api.quantumnumbers.anu.edu.au?length={bytes_needed}&type=uint8"
-            headers = {"x-api-key": "HLa6wLS9Lb6LiPRZPoUz88MD0MTOt3r62NMRX4TG"}  
+            headers = {"x-api-key": "YOUR_API_KEY"}  
             resp = requests.get(url, headers=headers, timeout=10)
             resp.raise_for_status()
             return bytes(resp.json()["data"])
