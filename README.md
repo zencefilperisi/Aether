@@ -1,4 +1,5 @@
-"""
+![Aether Attractor](docs/figures/aether_attractor.png)
+
 # AETHER: Chaotic Entropy & Security Suite
 
 Aether is a high-performance cryptographic ecosystem combining **non-linear chaos theory** 
