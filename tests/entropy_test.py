@@ -16,7 +16,7 @@ NUM_BITS = 10_000_000 # 10 Million bits
 ALPHA = 0.01          # Significance level
 
 # Use a clean engine initialization (no QRNG, to isolate chaos source)
-engine = NIHDE(use_live_qrng=False) 
+engine = NIHDE() 
 
 print("="*75)
 print(f"NIST SP 800-22 CORE COMPLIANCE TEST (Rust Core Hyperchaos)")
@@ -26,7 +26,8 @@ print("="*75)
 # --- BIT GENERATION ---
 start_time = time.perf_counter()
 # Leveraging the 16.5x faster Rust core for generation
-bits = np.array([engine.decide() for _ in range(NUM_BITS)], dtype=np.int8)
+bits = np.array([engine.decide() for _ in range(NUM_BITS)], dtype=np.uint8)
+bits = np.unpackbits(bits.view(np.uint8))[:NUM_BITS]
 end_time = time.perf_counter()
 
 ones = np.sum(bits)

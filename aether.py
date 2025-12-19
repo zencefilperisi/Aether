@@ -1,17 +1,13 @@
+# aether.py
 import argparse
 import sys
 import os
 import subprocess
 
-# Path setup to ensure local modules are found
 sys.path.append(os.getcwd())
 
-try:
-    from utility.vault import AetherVault
-    from utility.keygen import AetherKeyGen
-except ImportError:
-    print("ERROR: Could not find utility modules. Ensure you are running from the project root.")
-    sys.exit(1)
+from utility.vault import AetherVault
+from utility.keygen import AetherKeyGen
 
 def main():
     parser = argparse.ArgumentParser(
@@ -19,12 +15,12 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="Example Usage:\n"
                "  python aether.py --gen-key\n"
+               "  python aether.py --gen-phrase\n"
                "  python aether.py --encrypt secret.txt\n"
                "  python aether.py --decrypt secret.txt.aether\n"
                "  python aether.py --visualize"
     )
     
-    # Command groups
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--gen-key", action="store_true", help="Generate a 256-bit secure Hex key")
     group.add_argument("--gen-phrase", action="store_true", help="Generate a 12-word recovery phrase")
@@ -68,8 +64,8 @@ def main():
             
         elif args.visualize:
             print("[*] Initializing Chaos Engine and Visualizer...")
-            # Using -m to run as a module
-            subprocess.run(["python", "-m", "tests.visualize_chaos"])
+            env = os.environ.copy()
+            subprocess.run([sys.executable, "tests/visualize_chaos.py"], env=env)
 
     except Exception as e:
         print(f"[CRITICAL ERROR] {str(e)}")
