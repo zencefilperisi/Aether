@@ -56,5 +56,7 @@ if __name__ == "__main__":
     print(f"\n[+] 12-WORD MNEMONIC PHRASE:\n{phrase}")
     
     print("\n" + "="*45)
-    print("Status: Entropy Verified | Engine: NIST Passed")
+    print("Engine: Aether NIHDE (chaotic + OS/quantum seed)")
+    print("Run the NIST SP 800-22 suite to validate entropy:")
+    print("  python tests/nist_sp800_22.py")
     print("="*45)

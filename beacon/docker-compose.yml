@@ -1,0 +1,74 @@
+# Aether Randomness Beacon -- full stack.
+#
+#   docker compose up --build
+#
+# Brings up: PostgreSQL, Redis, RabbitMQ, the beacon API (produces + serves
+# pulses) and the audit worker (independent tamper-evident log). The beacon
+# is then live at http://localhost:8000
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: aether
+      POSTGRES_PASSWORD: aether
+      POSTGRES_DB: beacon
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aether -d beacon"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "15672:15672"   # management UI
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  beacon:
+    build:
+      context: ..                     # repo root, so the Aether core is in context
+      dockerfile: beacon/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      BEACON_DATABASE_URL: postgresql+asyncpg://aether:aether@postgres:5432/beacon
+      BEACON_REDIS_URL: redis://redis:6379/0
+      BEACON_RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      BEACON_PERIOD_SECONDS: "10"
+      # BEACON_SIGNING_KEY: set a 32-byte hex key here for stable signatures
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      rabbitmq: {condition: service_healthy}
+
+  audit-worker:
+    build:
+      context: ..
+      dockerfile: beacon/Dockerfile
+    command: ["python", "-m", "worker.audit_worker"]
+    environment:
+      BEACON_RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      AUDIT_LOG_PATH: /data/audit_log.jsonl
+    volumes:
+      - auditdata:/data
+    depends_on:
+      rabbitmq: {condition: service_healthy}
+
+volumes:
+  pgdata:
+  auditdata:

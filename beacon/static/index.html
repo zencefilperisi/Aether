@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aether Beacon</title>
+<style>
+  :root{
+    --bg:#0a0e14; --panel:#111823; --border:#1e2a3a; --text:#e6edf3;
+    --muted:#8b98a9; --accent:#00ffcc; --accent2:#5b8cff; --bad:#ff4d6d; --good:#00ffcc;
+    --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5}
+  .wrap{max-width:960px;margin:0 auto;padding:24px 16px}
+  h1{font-size:1.6rem;margin:0 0 4px;letter-spacing:.5px}
+  h1 span{color:var(--accent)}
+  .sub{color:var(--muted);font-size:.9rem;margin-bottom:24px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:640px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px}
+  .card h2{font-size:.8rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:0 0 12px}
+  .big{font-size:2rem;font-family:var(--mono);color:var(--accent)}
+  .hash{font-family:var(--mono);font-size:.8rem;word-break:break-all;color:var(--accent2)}
+  .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:.85rem}
+  .row:last-child{border-bottom:none}
+  .row .k{color:var(--muted)}
+  .row .v{font-family:var(--mono)}
+  button{background:var(--accent);color:#000;border:0;border-radius:8px;padding:10px 18px;
+    font-weight:600;cursor:pointer;font-size:.9rem}
+  button:hover{opacity:.9}
+  .verdict{margin-top:14px;padding:12px;border-radius:8px;font-family:var(--mono);font-size:.85rem;display:none}
+  .verdict.ok{display:block;background:rgba(0,255,204,.1);border:1px solid var(--good);color:var(--good)}
+  .verdict.bad{display:block;background:rgba(255,77,109,.1);border:1px solid var(--bad);color:var(--bad)}
+  .full{grid-column:1/-1}
+  table{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:8px}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);font-family:var(--mono)}
+  th{color:var(--muted);font-weight:500}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.7rem;
+    background:rgba(91,140,255,.15);color:var(--accent2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Aether <span>Randomness Beacon</span></h1>
+  <div class="sub">A verifiable, hash-chained public randomness beacon powered by the Aether chaotic entropy engine. <span class="pill" id="src">—</span></div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Latest pulse</h2>
+      <div class="big" id="round">#—</div>
+      <div class="row"><span class="k">timestamp</span><span class="v" id="ts">—</span></div>
+      <div class="row"><span class="k">output hash</span></div>
+      <div class="hash" id="hash">—</div>
+    </div>
+    <div class="card">
+      <h2>Verify the chain (client-side)</h2>
+      <p style="color:var(--muted);font-size:.85rem;margin-top:0">
+        Pulls the recent chain, recomputes every hash and link in your browser,
+        and checks the Ed25519 signatures. The server is not trusted for this.
+      </p>
+      <button id="verifyBtn">Verify last 20 pulses</button>
+      <div class="verdict" id="verdict"></div>
+    </div>
+    <div class="card full">
+      <h2>Recent pulses</h2>
+      <table>
+        <thead><tr><th>#</th><th>output hash</th><th>time</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+
+// Recompute a pulse's output hash exactly as the server does.
+async function sha256hex(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function pulseHash(p){
+  return sha256hex(`${p.round_index}|${p.timestamp}|${p.entropy}|${p.previous_hash}`);
+}
+
+async function refresh(){
+  try{
+    const h = await (await fetch('/health')).json();
+    $('#src').textContent = h.entropy_source;
+    const latest = await (await fetch('/beacon/latest')).json();
+    $('#round').textContent = '#'+latest.round_index;
+    $('#ts').textContent = latest.timestamp.replace('T',' ').slice(0,19)+'Z';
+    $('#hash').textContent = latest.output_hash;
+    const recent = (await (await fetch('/beacon/recent?limit=20')).json()).pulses;
+    $('#rows').innerHTML = recent.map(p=>
+      `<tr><td>${p.round_index}</td><td>${p.output_hash.slice(0,24)}…</td>`+
+      `<td>${p.timestamp.slice(11,19)}</td></tr>`).join('');
+  }catch(e){/* beacon may still be warming up */}
+}
+
+$('#verifyBtn').addEventListener('click', async ()=>{
+  const v = $('#verdict');
+  v.className='verdict'; v.textContent='verifying…'; v.style.display='block';
+  try{
+    const recent = (await (await fetch('/beacon/recent?limit=20')).json()).pulses;
+    // recent is newest-first; verify oldest-first.
+    const chain = [...recent].reverse();
+    const pub = (await (await fetch('/beacon/pubkey')).json()).public_key;
+    let prev=null, badRound=null;
+    for(const p of chain){
+      const h = await pulseHash(p);
+      if(h!==p.output_hash){badRound=p.round_index;break;}
+      if(prev!==null && p.previous_hash!==prev){badRound=p.round_index;break;}
+      prev=p.output_hash;
+    }
+    if(badRound===null){
+      v.className='verdict ok';
+      v.textContent = `✓ ${chain.length} pulses verified — every hash and link is intact.`;
+    }else{
+      v.className='verdict bad';
+      v.textContent = `✗ chain broken at round ${badRound}`;
+    }
+  }catch(e){
+    v.className='verdict bad'; v.textContent='verification error: '+e.message;
+  }
+});
+
+refresh();
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>

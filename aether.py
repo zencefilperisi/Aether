@@ -50,17 +50,22 @@ def main():
             if not os.path.exists(args.encrypt):
                 print(f"[ERROR] File not found: {args.encrypt}")
                 return
+            import getpass
+            pw = os.environ.get("AETHER_VAULT_PASSPHRASE") or getpass.getpass("Vault passphrase: ")
             vault = AetherVault()
-            vault.encrypt_file(args.encrypt)
-            print("\n[!] Encryption complete. Delete the original file only after saving the key.")
-            
+            out = vault.encrypt_file(args.encrypt, key_name="default", passphrase=pw)
+            print(f"[SUCCESS] Encrypted -> {out}")
+            print("[!] The key is stored (encrypted) in the keystore; you only need the passphrase to decrypt.")
+
         elif args.decrypt:
             if not os.path.exists(args.decrypt):
                 print(f"[ERROR] File not found: {args.decrypt}")
                 return
-            key = input("Enter the Hex Key for decryption: ").strip()
+            import getpass
+            pw = os.environ.get("AETHER_VAULT_PASSPHRASE") or getpass.getpass("Vault passphrase: ")
             vault = AetherVault()
-            vault.decrypt_file(args.decrypt, key)
+            out = vault.decrypt_file(args.decrypt, passphrase=pw)
+            print(f"[SUCCESS] Decrypted -> {out}")
             
         elif args.visualize:
             print("[*] Initializing Chaos Engine and Visualizer...")

@@ -1,0 +1,34 @@
+# Ignore everything that shouldn't go into the Docker build context,
+# keeping images small and builds fast.
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# Rust build artifacts (the image compiles fresh)
+core/chaos/aether_core_rs/target/
+
+# Secrets & local state
+.env
+*.key
+aether_keystore.json
+*.aether
+
+# Dev tooling / VCS
+.git/
+.github/
+.gitignore
+.pytest_cache/
+.ipynb_checkpoints/
+
+# GUI assets not needed in the CLI image
+aether_gui.py
+docs/
+stego_storage/
+
+# OS cruft
+.DS_Store
+Thumbs.db

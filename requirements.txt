@@ -1,5 +1,14 @@
-customtkinter==5.2.2
-matplotlib==3.8.2
-Pillow==10.2.0
-numpy==1.26.4
-scipy==1.13.0
+# --- Core runtime ---
+numpy>=1.26
+scipy>=1.11
+requests>=2.31
+python-dotenv>=1.0
+cryptography>=42.0
+
+# --- GUI (optional; only needed for aether_gui.py) ---
+customtkinter>=5.2.2
+matplotlib>=3.8
+Pillow>=10.2
+
+# --- Dev / test (optional) ---
+pytest>=8.0

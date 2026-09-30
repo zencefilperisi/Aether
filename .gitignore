@@ -4,9 +4,14 @@ __pycache__/
 *.pyc
 
 # Aether specific
-*.aether              
-stego_storage/*.png   
-!stego_storage/.gitkeep 
+*.aether
+stego_storage/*.png
+!stego_storage/.gitkeep
+
+# Secrets -- never commit real keys
+.env
+*.key
+aether_keystore.json
 
 # Build & OS
 target/

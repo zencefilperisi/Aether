@@ -143,28 +143,35 @@ class AetherApp(ctk.CTk):
         self.path_var = ctk.StringVar(value="Select a file...")
         ctk.CTkEntry(f_frame, textvariable=self.path_var, width=450).pack(side="left", padx=10)
         ctk.CTkButton(f_frame, text="BROWSE", width=100, command=self.browse_file).pack(side="left")
-        self.vault_key = ctk.CTkEntry(self.main_container, placeholder_text="Enter Hex Key...", width=565)
+        self.vault_key = ctk.CTkEntry(self.main_container, placeholder_text="Enter passphrase...", width=565, show="*")
         self.vault_key.pack(pady=20)
         ctk.CTkButton(self.main_container, text="ENCRYPT FILE", fg_color="#00FFCC", text_color="black", command=self.encrypt).pack(pady=10)
         ctk.CTkButton(self.main_container, text="DECRYPT FILE", fg_color="#FF3366", command=self.decrypt).pack(pady=10)
         self.v_status = ctk.CTkLabel(self.main_container, text="Status: Ready", text_color="gray"); self.v_status.pack(pady=20)
 
     def browse_file(self):
-        f = filedialog.askopenfilename(); 
+        f = filedialog.askopenfilename();
         if f: self.path_var.set(f)
 
     def encrypt(self):
         p = self.path_var.get()
-        if os.path.exists(p):
-            key = AetherVault().encrypt_file(p)
-            self.v_status.configure(text="Success!", text_color="#00FFCC")
-            self.vault_key.delete(0, "end"); self.vault_key.insert(0, key)
+        pw = self.vault_key.get().strip()
+        if os.path.exists(p) and pw:
+            try:
+                out = AetherVault().encrypt_file(p, key_name="gui", passphrase=pw)
+                self.v_status.configure(text=f"Encrypted -> {os.path.basename(out)}", text_color="#00FFCC")
+            except Exception as e:
+                self.v_status.configure(text=f"Failed: {e}", text_color="red")
+        else:
+            self.v_status.configure(text="Select a file and enter a passphrase", text_color="red")
 
     def decrypt(self):
-        p = self.path_var.get(); k = self.vault_key.get().strip()
-        if os.path.exists(p) and len(k) > 10:
-            try: AetherVault().decrypt_file(p, k); self.v_status.configure(text="Decrypted!", text_color="#00FFCC")
-            except: self.v_status.configure(text="Failed", text_color="red")
+        p = self.path_var.get(); pw = self.vault_key.get().strip()
+        if os.path.exists(p) and pw:
+            try:
+                AetherVault().decrypt_file(p, pw); self.v_status.configure(text="Decrypted!", text_color="#00FFCC")
+            except Exception:
+                self.v_status.configure(text="Failed (wrong passphrase or corrupt file)", text_color="red")
 
     # --- VIEW: STEGANO HIDEOUT ---
     def show_stego(self):
