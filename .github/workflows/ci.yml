@@ -40,9 +40,14 @@ jobs:
           pip install -r requirements.txt
           pip install maturin
 
-      - name: Build the Rust core (aether_core_rs)
-        working-directory: core/chaos/aether_core_rs
-        run: maturin develop --release
+      - name: Build & install the Rust core (aether_core_rs)
+        # `maturin develop` needs an active virtualenv, which CI has none of.
+        # Build a wheel and pip-install it into the runner's Python instead, so
+        # every later step imports the compiled core without a venv.
+        run: |
+          maturin build --release --out dist \
+            --manifest-path core/chaos/aether_core_rs/Cargo.toml
+          pip install dist/*.whl
 
       - name: Run unit tests (pytest)
         run: pytest -q
